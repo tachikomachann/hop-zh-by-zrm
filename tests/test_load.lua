@@ -52,4 +52,8 @@ end
 assert(src:find("hint_words_zh", 1, true) ~= nil, "init.lua 应提供 hint_words_zh")
 assert(src:find("HopZhWords", 1, true) ~= nil, "init.lua 应创建 HopZhWords 命令")
 
+-- 回归：t/T 与 operator-pending 偏移应按字符处理（修复多字节中文错位）
+assert(src:find("seg.char_offset", 1, true) ~= nil, "init.lua 应使用 seg.char_offset 做字符偏移")
+assert(src:find("nvim_get_mode", 1, true) ~= nil, "init.lua 应处理 operator-pending 模式")
+
 print("test_load: OK")

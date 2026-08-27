@@ -119,6 +119,26 @@ local function create_commands()
     end, {})
 end
 
+local function make_move_callback(opts)
+    return function(jt)
+        local offset = opts.hint_offset or 0
+        -- operator-pending（如 df/dF/dt/dT 删除）需要向右多包含目标字符；
+        -- hop 内部用 +1 字节实现，对多字节中文会劈开字符，这里改成 +1 字符。
+        if vim.api.nvim_get_mode().mode == 'no' and opts.direction ~= hint.HintDirection.BEFORE_CURSOR then
+            offset = offset + 1
+        end
+        if offset ~= 0 then
+            -- hop v2 的 hint_offset 按 cell 计算，对多字节中文会错位；
+            -- 这里统一改为按字符（字节精确）偏移，并自行收尾移动光标。
+            local line = vim.api.nvim_buf_get_lines(jt.buffer, jt.cursor.row - 1, jt.cursor.row, false)[1] or ""
+            jt.cursor.col = seg.char_offset(line, jt.cursor.col, offset)
+        end
+        vim.api.nvim_set_current_win(jt.window)
+        vim.cmd("normal! m'")
+        vim.api.nvim_win_set_cursor(jt.window, { jt.cursor.row, jt.cursor.col })
+    end
+end
+
 function M.hint_char1(opts)
     opts = setmetatable(opts or {}, {__index = M.opts})
 
@@ -137,7 +157,8 @@ function M.hint_char1(opts)
 
     hop.hint_with_regex(
         jump_regex.regex_by_case_searching(pat, plain_text, opts),
-        opts
+        opts,
+        make_move_callback(opts)
     )
 end
 
@@ -178,14 +199,15 @@ function M.hint_char2(opts)
 
     hop.hint_with_regex(
         jump_regex.regex_by_case_searching(pattern, plain_text, opts),
-        opts
+        opts,
+        make_move_callback(opts)
     )
 end
 
 function M.hint_words_zh(opts)
     opts = setmetatable(opts or {}, {__index = M.opts})
 
-    hop.hint_with_regex(zh_word_regex, opts)
+    hop.hint_with_regex(zh_word_regex, opts, make_move_callback(opts))
 end
 
 -- Will be called by hop.nvim

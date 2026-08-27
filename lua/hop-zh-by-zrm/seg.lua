@@ -62,4 +62,30 @@ end
 M.make_match = make_match
 M.match = make_match(words.set, words.max_len)
 
+-- 从 byte 偏移 col（0-based，指向某字符起点）前进 offset 个字符，
+-- 返回新的 byte 偏移（0-based，clamp 到行内：0 ~ 行尾）。
+function M.char_offset(line, col, offset)
+	local starts = {}
+	local i = 1
+	while i <= #line do
+		starts[#starts + 1] = i - 1
+		i = i + char_width(line, i)
+	end
+	starts[#starts + 1] = #line -- 行尾哨兵
+
+	local char_idx = #starts - 1
+	for k, s in ipairs(starts) do
+		if s == col then
+			char_idx = k - 1
+			break
+		end
+	end
+
+	char_idx = char_idx + offset
+	if char_idx < 0 then char_idx = 0 end
+	if char_idx > #starts - 1 then char_idx = #starts - 1 end
+
+	return starts[char_idx + 1]
+end
+
 return M
